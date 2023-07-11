@@ -1,3 +1,7 @@
+#include <fcntl.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
 #include "systemcalls.h"
 
 /**
@@ -11,11 +15,14 @@ bool do_system(const char *cmd)
 {
 
 /*
- * TODO  add your code here
  *  Call the system() function with the command set in the cmd
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
+    int ret = system(cmd);
+    if (ret == -1) {
+        return false;
+    }
 
     return true;
 }
@@ -50,7 +57,6 @@ bool do_exec(int count, ...)
     command[count] = command[count];
 
 /*
- * TODO:
  *   Execute a system command by calling fork, execv(),
  *   and wait instead of system (see LSP page 161).
  *   Use the command[0] as the full path to the command to execute
@@ -58,6 +64,21 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+    i = fork();
+    if (i == -1) {
+        exit(1);
+    } else if (i == 0) {
+        i = execv(command[0], (char *const*)command);
+        if (i == -1) {
+            exit(1);
+        }
+    } else {
+        int status;
+        wait(&status);
+        if (WIFEXITED(status) != 0 && WEXITSTATUS(status) != 0) {
+            return false;
+        }
+    }
 
     va_end(args);
 
@@ -86,12 +107,33 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 
 
 /*
- * TODO
  *   Call execv, but first using https://stackoverflow.com/a/13784315/1446624 as a refernce,
  *   redirect standard out to a file specified by outputfile.
  *   The rest of the behaviour is same as do_exec()
  *
 */
+    int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
+    if (fd < 0) {
+        exit(1);
+    }
+    i = fork();
+    if (i == -1) {
+        exit(1);
+    } else if (i == 0) {
+        dup2(fd, 1);
+        close(fd);
+        i = execv(command[0], (char *const*)command);
+        if (i == -1) {
+            exit(1);
+        }
+    } else {
+        int status;
+        wait(&status);
+        close(fd);
+        if (WIFEXITED(status) != 0 && WEXITSTATUS(status) != 0) {
+            return false;
+        }
+    }
 
     va_end(args);
 
