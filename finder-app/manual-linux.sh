@@ -45,7 +45,7 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     make ARCH=arm64 CROSS_COMPILE=aarch64-none-linux-gnu- defconfig
 
     # 3. Build the kernel
-    make -j4 ARCH=arm64 CROSS_COMPILE=aarch64-none-linux-gnu- all
+    make -j8 ARCH=arm64 CROSS_COMPILE=aarch64-none-linux-gnu- all
 fi
 
 echo "Adding the Image in outdir"
