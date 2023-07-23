@@ -66,6 +66,7 @@ rm -rf /tmp/aeld-data
 set +e
 echo ${OUTPUTSTRING} | grep "${MATCHSTR}"
 if [ $? -eq 0 ]; then
+    echo ${OUTPUTSTRING} >> /tmp/assignment4-result.txt
 	echo "success"
 	exit 0
 else
@@ -73,4 +74,3 @@ else
 	exit 1
 fi
 
-echo ${OUTPUTSTRING} >> /tmp/assignment4-result.txt
