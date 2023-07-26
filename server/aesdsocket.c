@@ -19,9 +19,8 @@ struct sockaddr_in address;
 
 void signal_handler(int signo) {
     if (signo == SIGINT || signo == SIGTERM) {
-        //FIXME
         printf("Caught signal, exiting\n");
-        /* syslog(LOG_USER | LOG_PERROR, "Caught signal, exiting\n"); */
+        syslog(LOG_USER | LOG_PERROR, "Caught signal, exiting\n");
 
         for (int i=0; i<MAX_CONNECTIONS; i++) {
             if (client_socket_fds[i] != 0) {
@@ -65,9 +64,8 @@ void start() {
                 exit(-1);
             }
             inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, 30 * sizeof(char));
-            //FIXME
             printf("Accepted connection from %s\n", client_ip);
-            /* syslog(LOG_USER | LOG_PERROR, "Accepted connection from %s\n", client_ip); */
+            syslog(LOG_USER | LOG_PERROR, "Accepted connection from %s\n", client_ip);
 
             buffer = (char*)malloc(BUFF_SIZE * sizeof(char));
             memset(buffer, 0, BUFF_SIZE * sizeof(char));
@@ -92,9 +90,8 @@ void start() {
             close(*client_socket_fd);
             *client_socket_fd = 0;
 
-            //FIXME
             printf("Closed connection from %s\n", client_ip);
-            /* syslog(LOG_USER | LOG_PERROR, "Closed connection from %s\n", client_ip); */
+            syslog(LOG_USER | LOG_PERROR, "Closed connection from %s\n", client_ip);
         }
     }
 
