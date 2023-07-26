@@ -11,7 +11,7 @@
 #include <netinet/in.h>
 
 #define MAX_CONNECTIONS 10
-#define BUFF_SIZE 140
+#define BUFF_SIZE 1024
 
 int socket_fd;
 int client_socket_fds[MAX_CONNECTIONS];
@@ -20,7 +20,7 @@ struct sockaddr_in address;
 void signal_handler(int signo) {
     if (signo == SIGINT || signo == SIGTERM) {
         printf("Caught signal, exiting\n");
-        syslog(LOG_USER | LOG_PERROR, "Caught signal, exiting\n");
+        /* syslog(LOG_USER | LOG_PERROR, "Caught signal, exiting\n"); */
 
         for (int i=0; i<MAX_CONNECTIONS; i++) {
             if (client_socket_fds[i] != 0) {
@@ -28,7 +28,7 @@ void signal_handler(int signo) {
             }
         }
 
-        remove("/var/tmp/aesdsocketdata");
+        /* remove("/var/tmp/aesdsocketdata"); */
         close(socket_fd);
         exit(1);
     }
@@ -39,6 +39,7 @@ void start() {
 
     ret = listen(socket_fd, MAX_CONNECTIONS);
     if (ret == -1) {
+        printf("FAILED to listen\n");
         exit(-1);
     }
 
@@ -65,7 +66,7 @@ void start() {
             }
             inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, 30 * sizeof(char));
             printf("Accepted connection from %s\n", client_ip);
-            syslog(LOG_USER | LOG_PERROR, "Accepted connection from %s\n", client_ip);
+            /* syslog(LOG_USER | LOG_PERROR, "Accepted connection from %s\n", client_ip); */
 
             buffer = (char*)malloc(BUFF_SIZE * sizeof(char));
             memset(buffer, 0, BUFF_SIZE * sizeof(char));
@@ -84,14 +85,13 @@ void start() {
                 send(*client_socket_fd, fileBuffer, bytes_read, 0);
             }
 
-            free(buffer);
             free(fileBuffer);
 
             close(*client_socket_fd);
             *client_socket_fd = 0;
 
             printf("Closed connection from %s\n", client_ip);
-            syslog(LOG_USER | LOG_PERROR, "Closed connection from %s\n", client_ip);
+            /* syslog(LOG_USER | LOG_PERROR, "Closed connection from %s\n", client_ip); */
         }
     }
 
@@ -108,6 +108,7 @@ int main(int argc, char **argv) {
 
     socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (socket_fd == -1) {
+        printf("FAILED to create socket\n");
         exit(-1);
     }
 
@@ -118,6 +119,7 @@ int main(int argc, char **argv) {
     ret = bind(socket_fd, (struct sockaddr *) &address, sizeof(address));
 
     if (ret == -1) {
+        printf("FAILED to bind socket\n");
         exit(-1);
     }
 
