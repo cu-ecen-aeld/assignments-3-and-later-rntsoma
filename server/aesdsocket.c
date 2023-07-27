@@ -29,7 +29,7 @@ void signal_handler(int signo) {
             }
         }
 
-        /* remove("/var/tmp/aesdsocketdata"); */
+        remove("/var/tmp/aesdsocketdata");
         close(socket_fd);
         exit(1);
     }
@@ -70,15 +70,33 @@ void start() {
             printf("Accepted connection from %s\n", client_ip);
             /* syslog(LOG_USER | LOG_PERROR, "Accepted connection from %s\n", client_ip); */
 
-            buffer = (char*)malloc(BUFF_SIZE * sizeof(char));
-            memset(buffer, 0, BUFF_SIZE * sizeof(char));
-            ret = recv(*client_socket_fd, buffer, BUFF_SIZE, 0);
-            printf("Received: %s", buffer);
-
+            char *ptr = NULL;
             FILE *fp = fopen("/var/tmp/aesdsocketdata", "a");
-            fprintf(fp, "%s", buffer);
-            fclose(fp);
+            while (1) {
+                buffer = (char*)malloc(BUFF_SIZE * sizeof(char));
+                memset(buffer, 0, BUFF_SIZE * sizeof(char));
+                ret = recv(*client_socket_fd, buffer, BUFF_SIZE - 1, 0);
 
+                if (ret == 0 || ret == -1) {
+                    fclose(fp);
+                    break;
+                }
+
+                printf("Received: %s\n", buffer);
+
+                fprintf(fp, "%s", buffer);
+                ptr = strchr(buffer, '\n');
+                printf("Here: %p\n", ptr);
+
+                if (ptr != NULL) {
+                    printf("Stop\n");
+                    fclose(fp);
+                    break;
+                }
+            }
+            free(buffer);
+
+            printf("Resume\n");
             ssize_t bytes_read;
             int file_fd = open("/var/tmp/aesdsocketdata", O_RDONLY);
             char *fileBuffer = (char*)malloc(BUFF_SIZE * sizeof(char));
