@@ -20,8 +20,8 @@ struct sockaddr_in address;
 
 void signal_handler(int signo) {
     if (signo == SIGINT || signo == SIGTERM) {
-        printf("Caught signal, exiting\n");
-        /* syslog(LOG_USER | LOG_PERROR, "Caught signal, exiting\n"); */
+        /* printf("Caught signal, exiting\n"); */
+        syslog(LOG_USER | LOG_PERROR, "Caught signal, exiting\n");
 
         for (int i=0; i<MAX_CONNECTIONS; i++) {
             if (client_socket_fds[i] != 0) {
@@ -67,8 +67,8 @@ void start() {
                 exit(-1);
             }
             inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, CLIENT_IP_SIZE * sizeof(char));
-            printf("Accepted connection from %s\n", client_ip);
-            /* syslog(LOG_USER | LOG_PERROR, "Accepted connection from %s\n", client_ip); */
+            /* printf("Accepted connection from %s\n", client_ip); */
+            syslog(LOG_USER | LOG_PERROR, "Accepted connection from %s\n", client_ip);
 
             char *ptr = NULL;
             FILE *fp = fopen("/var/tmp/aesdsocketdata", "a");
@@ -82,11 +82,10 @@ void start() {
                     break;
                 }
 
-                printf("Received: %s\n", buffer);
+                /* printf("Received: %s\n", buffer); */
 
                 fprintf(fp, "%s", buffer);
                 ptr = strchr(buffer, '\n');
-                printf("Here: %p\n", ptr);
 
                 if (ptr != NULL) {
                     printf("Stop\n");
@@ -96,7 +95,6 @@ void start() {
             }
             free(buffer);
 
-            printf("Resume\n");
             ssize_t bytes_read;
             int file_fd = open("/var/tmp/aesdsocketdata", O_RDONLY);
             char *fileBuffer = (char*)malloc(BUFF_SIZE * sizeof(char));
@@ -110,8 +108,8 @@ void start() {
             close(*client_socket_fd);
             *client_socket_fd = 0;
 
-            printf("Closed connection from %s\n", client_ip);
-            /* syslog(LOG_USER | LOG_PERROR, "Closed connection from %s\n", client_ip); */
+            /* printf("Closed connection from %s\n", client_ip); */
+            syslog(LOG_USER | LOG_PERROR, "Closed connection from %s\n", client_ip);
         }
     }
 
