@@ -87,6 +87,7 @@ void start() {
 
                 if (ret == 0 || ret == -1) {
                     fclose(fp);
+                    free(buffer);
                     break;
                 }
 
@@ -97,11 +98,12 @@ void start() {
 
                 if (ptr != NULL) {
                     printf("Stop\n");
+                    free(buffer);
                     fclose(fp);
                     break;
                 }
+                free(buffer);
             }
-            free(buffer);
 
             ssize_t bytes_read;
             int file_fd = open("/var/tmp/aesdsocketdata", O_RDONLY);
