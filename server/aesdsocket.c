@@ -45,7 +45,6 @@ void start() {
     ret = listen(socket_fd, MAX_CONNECTIONS);
     if (ret == -1) {
         printf("FAILED to listen\n");
-        /* exit(-1); */
         goto CLOSE_SOCKET;
     }
 
@@ -66,12 +65,10 @@ void start() {
 
         if (client_socket_fd != NULL) {
             memset(client_ip, 0, CLIENT_IP_SIZE * sizeof(char));
-            /* memset(&client_addr, 0, sizeof(struct sockaddr_in)); */
 
             *client_socket_fd = accept(socket_fd, (struct sockaddr *) &client_addr, &client_addr_len);
             if (*client_socket_fd == -1) {
                 printf("FAILED to accept\n");
-                /* exit(-1); */
                 goto CLOSE_SOCKET;
             }
             inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, CLIENT_IP_SIZE * sizeof(char));
@@ -97,7 +94,6 @@ void start() {
                 ptr = strchr(buffer, '\n');
 
                 if (ptr != NULL) {
-                    printf("Stop\n");
                     free(buffer);
                     fclose(fp);
                     break;
