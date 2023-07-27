@@ -12,6 +12,7 @@
 
 #define MAX_CONNECTIONS 10
 #define BUFF_SIZE 1024
+#define CLIENT_IP_SIZE 30
 
 int socket_fd;
 int client_socket_fds[MAX_CONNECTIONS];
@@ -47,7 +48,7 @@ void start() {
         int client_addr_len;
         int *client_socket_fd = NULL;
         struct sockaddr_in client_addr;
-        char client_ip[30];
+        char client_ip[CLIENT_IP_SIZE];
         char *buffer;
 
         for (int i=0; i<MAX_CONNECTIONS; i++) {
@@ -57,14 +58,15 @@ void start() {
         }
 
         if (client_socket_fd != NULL) {
-            memset(client_ip, 0, 17 * sizeof(char));
+            memset(client_ip, 0, CLIENT_IP_SIZE * sizeof(char));
             /* memset(&client_addr, 0, sizeof(struct sockaddr_in)); */
 
             *client_socket_fd = accept(socket_fd, (struct sockaddr *) &client_addr, &client_addr_len);
             if (*client_socket_fd == -1) {
+                printf("FAILED to accept\n");
                 exit(-1);
             }
-            inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, 30 * sizeof(char));
+            inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, CLIENT_IP_SIZE * sizeof(char));
             printf("Accepted connection from %s\n", client_ip);
             /* syslog(LOG_USER | LOG_PERROR, "Accepted connection from %s\n", client_ip); */
 
@@ -79,9 +81,9 @@ void start() {
 
             ssize_t bytes_read;
             int file_fd = open("/var/tmp/aesdsocketdata", O_RDONLY);
-            char *fileBuffer = (char*)malloc(500 * sizeof(char));
-            memset(fileBuffer, 0, 500 * sizeof(char));
-            while ((bytes_read = read(file_fd, fileBuffer, 500 * sizeof(char))) > 0) {
+            char *fileBuffer = (char*)malloc(BUFF_SIZE * sizeof(char));
+            memset(fileBuffer, 0, BUFF_SIZE * sizeof(char));
+            while ((bytes_read = read(file_fd, fileBuffer, BUFF_SIZE * sizeof(char))) > 0) {
                 send(*client_socket_fd, fileBuffer, bytes_read, 0);
             }
 
