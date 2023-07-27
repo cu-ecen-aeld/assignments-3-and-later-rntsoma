@@ -8,4 +8,9 @@ Server: aesdsocket.c
 	$(CC) -o aesdsocket aesdsocket.c
 
 clean:
-	rm aesdsocket
+	@if [ -e aesdsocket ]; then \
+		rm aesdsocket; \
+	else \
+		echo "myfile.txt does not exist, nothing to clean."; \
+	fi
+
