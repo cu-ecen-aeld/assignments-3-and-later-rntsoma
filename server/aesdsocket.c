@@ -18,20 +18,24 @@ int socket_fd;
 int client_socket_fds[MAX_CONNECTIONS];
 struct sockaddr_in address;
 
+void close_connections() {
+    for (int i=0; i<MAX_CONNECTIONS; i++) {
+        if (client_socket_fds[i] != 0) {
+            close(client_socket_fds[i]);
+        }
+    }
+}
+
 void signal_handler(int signo) {
     if (signo == SIGINT || signo == SIGTERM) {
         /* printf("Caught signal, exiting\n"); */
         syslog(LOG_USER | LOG_PERROR, "Caught signal, exiting\n");
 
-        for (int i=0; i<MAX_CONNECTIONS; i++) {
-            if (client_socket_fds[i] != 0) {
-                close(client_socket_fds[i]);
-            }
-        }
+        close_connections();
 
         remove("/var/tmp/aesdsocketdata");
         close(socket_fd);
-        exit(1);
+        exit(-1);
     }
 }
 
@@ -41,7 +45,8 @@ void start() {
     ret = listen(socket_fd, MAX_CONNECTIONS);
     if (ret == -1) {
         printf("FAILED to listen\n");
-        exit(-1);
+        /* exit(-1); */
+        goto CLOSE_SOCKET;
     }
 
     while (1) {
@@ -56,6 +61,8 @@ void start() {
                 client_socket_fd = &client_socket_fds[i];
             }
         }
+        memset(&client_addr_len, 0, sizeof(int));
+        memset(&client_addr, 0, sizeof(struct sockaddr_in));
 
         if (client_socket_fd != NULL) {
             memset(client_ip, 0, CLIENT_IP_SIZE * sizeof(char));
@@ -64,7 +71,8 @@ void start() {
             *client_socket_fd = accept(socket_fd, (struct sockaddr *) &client_addr, &client_addr_len);
             if (*client_socket_fd == -1) {
                 printf("FAILED to accept\n");
-                exit(-1);
+                /* exit(-1); */
+                goto CLOSE_SOCKET;
             }
             inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, CLIENT_IP_SIZE * sizeof(char));
             /* printf("Accepted connection from %s\n", client_ip); */
@@ -114,11 +122,17 @@ void start() {
     }
 
     close(socket_fd);
+    return;
 
+CLOSE_SOCKET:
+    close_connections();
+    close(socket_fd);
+    exit(-1);
 }
 
 int main(int argc, char **argv) {
     int ret;
+    int optVal = 1;
 
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
@@ -134,11 +148,17 @@ int main(int argc, char **argv) {
     address.sin_family = AF_INET;
     address.sin_port = htons(9000);
     address.sin_addr.s_addr = INADDR_ANY;
-    ret = bind(socket_fd, (struct sockaddr *) &address, sizeof(address));
 
+    ret = setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(int));
+    if (ret == -1) {
+        printf("FAILED to set option\n");
+        goto CLOSE_SOCKET;
+    }
+
+    ret = bind(socket_fd, (struct sockaddr *) &address, sizeof(address));
     if (ret == -1) {
         printf("FAILED to bind socket\n");
-        exit(-1);
+        goto CLOSE_SOCKET;
     }
 
     // Run logic
@@ -159,6 +179,11 @@ int main(int argc, char **argv) {
     } else {
         printf("Invalid argument\n");
         exit(-1);
+        goto CLOSE_SOCKET;
     }
     return 0;
+
+CLOSE_SOCKET:
+    close(socket_fd);
+    exit(-1);
 }
