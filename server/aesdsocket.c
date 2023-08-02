@@ -22,12 +22,14 @@ node *head;
 pthread_mutex_t mutex;
 
 void close_connections() {
-    //TODO
-    /* for (int i=0; i<MAX_CONNECTIONS; i++) { */
-    /*     if (client_socket_fds[i] != 0) { */
-    /*         close(client_socket_fds[i]); */
-    /*     } */
-    /* } */
+    node *head_ptr, *tmp;
+
+    SET_HEAD_PTR(head, head_ptr);
+    FREE_ALL_RESOURCES(head_ptr, tmp);
+
+    /* SET_HEAD_PTR(head, head_ptr); */
+    /* PRINT_LIST(head_ptr); */
+    free(head);
 }
 
 void signal_handler(int signo) {
@@ -43,7 +45,12 @@ void signal_handler(int signo) {
     }
 }
 
-void *spawn(void *arg) {
+void cleanup(void *args) {
+    printf("Force unlocking mutex\n");
+    pthread_mutex_unlock(&mutex);
+}
+
+void *spawn_client_thread(void *arg) {
     int ret;
     int file_fd;
     char *buffer;
@@ -52,6 +59,8 @@ void *spawn(void *arg) {
     ssize_t bytes_read;
     FILE *fp = fopen("/var/tmp/aesdsocketdata", "a");
     node *info = (node *)arg;
+
+    pthread_cleanup_push(cleanup, NULL);
 
     ret = pthread_mutex_lock(&mutex);
     if (ret != 0) {
@@ -94,6 +103,7 @@ void *spawn(void *arg) {
     free(fileBuffer);
 
 exit:
+    pthread_cleanup_pop(0);
     close(info->client_socket_fd);
     info->completed = true;
 
@@ -136,13 +146,13 @@ void start() {
         new_node->client_socket_fd = client_socket_fd;
         memcpy(new_node->client_ip, client_ip, CLIENT_IP_SIZE);
 
-        ret = pthread_create(&thread_id, NULL, spawn, new_node);
+        ret = pthread_create(&thread_id, NULL, spawn_client_thread, new_node);
         new_node->pthread_id = thread_id;
 
         INSERT_NODE(head_ptr, new_node);
         SET_HEAD_PTR(head, head_ptr);
 
-        FREE_RESOURCES(head_ptr, tmp);
+        FREE_COMPLETED_RESOURCES(head_ptr, tmp);
     }
 
     close(socket_fd);

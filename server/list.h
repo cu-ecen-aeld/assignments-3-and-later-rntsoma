@@ -13,7 +13,17 @@ typedef struct node {
     char client_ip[CLIENT_IP_SIZE];
 } node;
 
-#define FREE_RESOURCES(head, tmp) \
+#define FREE_ALL_RESOURCES(head, tmp) \
+    while (head->next_node != NULL) { \
+        pthread_cancel(head->next_node->pthread_id); \
+        pthread_join(head->next_node->pthread_id, NULL); \
+        close(head->next_node->client_socket_fd); \
+        tmp = head->next_node; \
+        head->next_node = head->next_node->next_node; \
+        free(tmp); \
+    }\
+
+#define FREE_COMPLETED_RESOURCES(head, tmp) \
     while (head->next_node != NULL) { \
         if (head->next_node->completed == true) { \
             pthread_join(head->next_node->pthread_id, NULL); \
