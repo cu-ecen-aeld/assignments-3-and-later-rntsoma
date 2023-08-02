@@ -245,10 +245,10 @@ int main(int argc, char **argv) {
     }
 
     INIT_NODE(head);
-    start_time_monitor();
 
     // Run logic
     if (argc == 1) {
+        start_time_monitor();
         start_server();
     } else if (argc == 2 && strncmp(argv[1], "-d", 2) == 0) {
         printf("Daemon mode");
@@ -257,6 +257,7 @@ int main(int argc, char **argv) {
         if (ret == 0) {
             ret = fork();
             if (ret == 0) {
+                start_time_monitor();
                 start_server();
             }
         } else {
