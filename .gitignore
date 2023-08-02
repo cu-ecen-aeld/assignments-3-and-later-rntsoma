@@ -1,4 +1,6 @@
 *.o
+server/main.c
+*.sw*
 writer
 Test_*_Runner.c
 build/

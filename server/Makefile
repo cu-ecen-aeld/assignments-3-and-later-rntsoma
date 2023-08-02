@@ -5,7 +5,7 @@ default: all
 all: Server
 
 Server: aesdsocket.c
-	$(CC) -o aesdsocket aesdsocket.c
+	$(CC) -pthread -o aesdsocket aesdsocket.c
 
 clean:
 	@if [ -e aesdsocket ]; then \
