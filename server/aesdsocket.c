@@ -19,6 +19,7 @@ int socket_fd;
 int client_socket_fds[MAX_CONNECTIONS];
 struct sockaddr_in address;
 node *head;
+pthread_mutex_t mutex;
 
 void close_connections() {
     //TODO
@@ -44,10 +45,19 @@ void signal_handler(int signo) {
 
 void *spawn(void *arg) {
     int ret;
+    int file_fd;
     char *buffer;
     char *ptr = NULL;
+    char *fileBuffer;
+    ssize_t bytes_read;
     FILE *fp = fopen("/var/tmp/aesdsocketdata", "a");
     node *info = (node *)arg;
+
+    ret = pthread_mutex_lock(&mutex);
+    if (ret != 0) {
+        printf("Mutex lock error\n");
+        goto exit;
+    }
 
     while (1) {
         buffer = (char*)malloc(BUFF_SIZE * sizeof(char));
@@ -71,16 +81,19 @@ void *spawn(void *arg) {
         free(buffer);
     }
 
-    ssize_t bytes_read;
-    int file_fd = open("/var/tmp/aesdsocketdata", O_RDONLY);
-    char *fileBuffer = (char*)malloc(BUFF_SIZE * sizeof(char));
+    fileBuffer = (char*)malloc(BUFF_SIZE * sizeof(char));
     memset(fileBuffer, 0, BUFF_SIZE * sizeof(char));
+
+    file_fd = open("/var/tmp/aesdsocketdata", O_RDONLY);
     while ((bytes_read = read(file_fd, fileBuffer, BUFF_SIZE * sizeof(char))) > 0) {
         send(info->client_socket_fd, fileBuffer, bytes_read, 0);
     }
 
+    pthread_mutex_unlock(&mutex);
+
     free(fileBuffer);
 
+exit:
     close(info->client_socket_fd);
     info->completed = true;
 
@@ -148,6 +161,12 @@ int main(int argc, char **argv) {
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
     memset(&client_socket_fds, 0, MAX_CONNECTIONS * sizeof(int));
+
+    ret = pthread_mutex_init(&mutex, NULL);
+    if (ret != 0) {
+        printf("Failed to initialize mutex\n");
+        exit(-1);
+    }
 
     socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (socket_fd == -1) {
