@@ -1,3 +1,4 @@
+#include <time.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -68,7 +69,7 @@ void *spawn_client_thread(void *arg) {
         goto exit;
     }
 
-    while (1) {
+    while (true) {
         buffer = (char*)malloc(BUFF_SIZE * sizeof(char));
         memset(buffer, 0, BUFF_SIZE * sizeof(char));
         ret = recv(info->client_socket_fd, buffer, BUFF_SIZE - 1, 0);
@@ -111,7 +112,7 @@ exit:
     /* syslog(LOG_USER | LOG_PERROR, "Closed connection from %s\n", info->client_ip); */
 }
 
-void start() {
+void start_server() {
     int ret;
 
     ret = listen(socket_fd, MAX_CONNECTIONS);
@@ -120,7 +121,7 @@ void start() {
         goto CLOSE_SOCKET;
     }
 
-    while (1) {
+    while (true) {
         int client_addr_len;
         int client_socket_fd;
         struct sockaddr_in client_addr;
@@ -164,6 +165,48 @@ CLOSE_SOCKET:
     exit(-1);
 }
 
+void *spawn_time_monitor_thread() {
+    time_t current_time;
+    struct tm *time_info;
+    char rfc2822_time[64];
+    FILE *fp;
+
+    memset(rfc2822_time, 0, 64 * sizeof(char));
+    pthread_cleanup_push(cleanup, NULL);
+
+    while (true) {
+        sleep(10);
+        current_time = time(NULL);
+        time_info = localtime(&current_time);
+        strftime(rfc2822_time, sizeof(rfc2822_time), "%a, %d %b %Y %H:%M:%S %z", time_info);
+        printf("timestamp: %s\n", rfc2822_time);
+
+        fp = fopen("/var/tmp/aesdsocketdata", "a");
+
+        pthread_mutex_lock(&mutex);
+        fprintf(fp, "timestamp: %s\n", rfc2822_time);
+        pthread_mutex_unlock(&mutex);
+
+        fclose(fp);
+    }
+
+    pthread_cleanup_pop(0);
+}
+
+void start_time_monitor() {
+    int ret;
+    node *new_node, *head_ptr, *tmp;
+    pthread_t thread_id;
+
+    INIT_NODE(new_node);
+    SET_HEAD_PTR(head, head_ptr);
+
+    ret = pthread_create(&thread_id, NULL, spawn_time_monitor_thread, NULL);
+    new_node->pthread_id = thread_id;
+
+    INSERT_NODE(head_ptr, new_node);
+}
+
 int main(int argc, char **argv) {
     int ret;
     int optVal = 1;
@@ -202,10 +245,11 @@ int main(int argc, char **argv) {
     }
 
     INIT_NODE(head);
+    start_time_monitor();
 
     // Run logic
     if (argc == 1) {
-        start();
+        start_server();
     } else if (argc == 2 && strncmp(argv[1], "-d", 2) == 0) {
         printf("Daemon mode");
         ret = fork();
@@ -213,7 +257,7 @@ int main(int argc, char **argv) {
         if (ret == 0) {
             ret = fork();
             if (ret == 0) {
-                start();
+                start_server();
             }
         } else {
             waitpid(ret, NULL, 0);
